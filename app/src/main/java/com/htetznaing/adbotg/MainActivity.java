@@ -391,7 +391,7 @@ public class MainActivity extends AppCompatActivity implements TextView.OnEditor
                 while (!stream.isClosed()) {
                     try {
                         // Print each thing we read from the shell stream
-                        final String[] output = {new String(stream.read(), "US-ASCII")};
+                        final String[] output = {new String(stream.read(), "UTF-8")};
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
