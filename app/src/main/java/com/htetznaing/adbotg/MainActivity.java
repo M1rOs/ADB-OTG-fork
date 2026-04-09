@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements TextView.OnEditor
         tvStatus = findViewById(R.id.tv_status);
         usb_icon = findViewById(R.id.usb_icon);
         logs = findViewById(R.id.logs);
+        logs.setTextIsSelectable(true);
         terminalView = findViewById(R.id.terminalView);
         checkContainer = findViewById(R.id.checkContainer);
         edCommand = findViewById(R.id.edCommand);
@@ -400,7 +401,7 @@ public class MainActivity extends AppCompatActivity implements TextView.OnEditor
                                     System.out.println("End => "+user);
                                 }
 
-                                logs.append(output[0]);
+                                logs.append(AnsiParser.parse(output[0]));
 
                                 scrollView.post(new Runnable() {
                                     @Override
