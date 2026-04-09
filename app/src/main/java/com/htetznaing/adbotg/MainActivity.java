@@ -513,5 +513,130 @@ public class MainActivity extends AppCompatActivity implements TextView.OnEditor
             return false;
         }
     }
-}
 
+  public static class AnsiParser {
+    
+    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[([0-9;]*)m");
+    
+    private static final Map<Integer, Integer> FOREGROUND_COLORS = new HashMap<>();
+    private static final Map<Integer, Integer> BACKGROUND_COLORS = new HashMap<>();
+    
+    static {
+        FOREGROUND_COLORS.put(30, Color.BLACK);
+        FOREGROUND_COLORS.put(31, Color.RED);
+        FOREGROUND_COLORS.put(32, Color.rgb(0, 170, 0));
+        FOREGROUND_COLORS.put(33, Color.YELLOW);
+        FOREGROUND_COLORS.put(34, Color.BLUE);
+        FOREGROUND_COLORS.put(35, Color.MAGENTA);
+        FOREGROUND_COLORS.put(36, Color.CYAN);
+        FOREGROUND_COLORS.put(37, Color.LTGRAY);
+        
+        FOREGROUND_COLORS.put(90, Color.DKGRAY);
+        FOREGROUND_COLORS.put(91, Color.rgb(255, 85, 85));
+        FOREGROUND_COLORS.put(92, Color.rgb(85, 255, 85));
+        FOREGROUND_COLORS.put(93, Color.rgb(255, 255, 85));
+        FOREGROUND_COLORS.put(94, Color.rgb(85, 85, 255));
+        FOREGROUND_COLORS.put(95, Color.rgb(255, 85, 255));
+        FOREGROUND_COLORS.put(96, Color.rgb(85, 255, 255));
+        FOREGROUND_COLORS.put(97, Color.WHITE);
+        
+        BACKGROUND_COLORS.put(40, Color.BLACK);
+        BACKGROUND_COLORS.put(41, Color.RED);
+        BACKGROUND_COLORS.put(42, Color.rgb(0, 170, 0));
+        BACKGROUND_COLORS.put(43, Color.YELLOW);
+        BACKGROUND_COLORS.put(44, Color.BLUE);
+        BACKGROUND_COLORS.put(45, Color.MAGENTA);
+        BACKGROUND_COLORS.put(46, Color.CYAN);
+        BACKGROUND_COLORS.put(47, Color.LTGRAY);
+        
+        BACKGROUND_COLORS.put(100, Color.DKGRAY);
+        BACKGROUND_COLORS.put(101, Color.rgb(255, 85, 85));
+        BACKGROUND_COLORS.put(102, Color.rgb(85, 255, 85));
+        BACKGROUND_COLORS.put(103, Color.rgb(255, 255, 85));
+        BACKGROUND_COLORS.put(104, Color.rgb(85, 85, 255));
+        BACKGROUND_COLORS.put(105, Color.rgb(255, 85, 255));
+        BACKGROUND_COLORS.put(106, Color.rgb(85, 255, 255));
+        BACKGROUND_COLORS.put(107, Color.WHITE);
+    }
+    
+    public static Spanned parse(String input) {
+        if (input == null) return new SpannableStringBuilder("");
+        
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        Matcher matcher = ANSI_PATTERN.matcher(input);
+        int lastEnd = 0;
+        
+        int fgColor = -1;
+        int bgColor = -1;
+        int styleFlags = Typeface.NORMAL;
+        
+        while (matcher.find()) {
+            int start = matcher.start();
+            
+            if (start > lastEnd) {
+                appendStyled(builder, input.substring(lastEnd, start), fgColor, bgColor, styleFlags);
+            }
+            
+            String codesStr = matcher.group(1);
+            if (!codesStr.isEmpty()) {
+                for (String codeStr : codesStr.split(";")) {
+                    try {
+                        int code = Integer.parseInt(codeStr);
+                        if (code == 0) {
+                            fgColor = -1;
+                            bgColor = -1;
+                            styleFlags = Typeface.NORMAL;
+                        } else if (code == 1) {
+                            styleFlags |= Typeface.BOLD;
+                        } else if (code == 3) {
+                            styleFlags |= Typeface.ITALIC;
+                        } else if (code == 22) {
+                            styleFlags &= ~Typeface.BOLD;
+                        } else if (code == 23) {
+                            styleFlags &= ~Typeface.ITALIC;
+                        } else if (FOREGROUND_COLORS.containsKey(code)) {
+                            fgColor = FOREGROUND_COLORS.get(code);
+                        } else if (code == 39) {
+                            fgColor = -1;
+                        } else if (BACKGROUND_COLORS.containsKey(code)) {
+                            bgColor = BACKGROUND_COLORS.get(code);
+                        } else if (code == 49) {
+                            bgColor = -1;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            } else {
+                fgColor = -1;
+                bgColor = -1;
+                styleFlags = Typeface.NORMAL;
+            }
+            
+            lastEnd = matcher.end();
+        }
+        
+        if (lastEnd < input.length()) {
+            appendStyled(builder, input.substring(lastEnd), fgColor, bgColor, styleFlags);
+        }
+        
+        return builder;
+    }
+    
+    private static void appendStyled(SpannableStringBuilder builder, String text,
+                                     int fgColor, int bgColor, int styleFlags) {
+        if (text.isEmpty()) return;
+        
+        int start = builder.length();
+        builder.append(text);
+        int end = builder.length();
+        
+        if (fgColor != -1) {
+            builder.setSpan(new ForegroundColorSpan(fgColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (bgColor != -1) {
+            builder.setSpan(new BackgroundColorSpan(bgColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (styleFlags != Typeface.NORMAL) {
+            builder.setSpan(new StyleSpan(styleFlags), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+}
